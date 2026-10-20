@@ -2,7 +2,6 @@
 # Month-to-date TURN egress for the account (the metric Cloudflare bills on).
 # Same query the Worker's usage cap uses, so run this to verify it before relying on the cap.
 . "$(dirname "$0")/lib.sh"
-load_config
 
 tok=$CF_ANALYTICS_TOKEN   # needs "Account Analytics: Read"
 to=$(date -u +%Y-%m-%d); from="${to%-*}-01"

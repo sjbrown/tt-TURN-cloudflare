@@ -4,22 +4,29 @@
 #   bin/test.sh
 #   WORKER_URL=https://tt-turn-credentials.<you>.workers.dev bin/test.sh
 . "$(dirname "$0")/lib.sh"
-load_config
 
-check() { # label json
-  local urls='[.iceServers | (if type=="array" then .[] else . end) | .urls | (if type=="array" then .[] else . end)]'
-  local n_stun n_turn n_turns
-  n_stun=$(jq  "$urls | map(select(startswith(\"stun:\")))  | length" <<<"$2")
-  n_turn=$(jq  "$urls | map(select(startswith(\"turn:\")))  | length" <<<"$2")
-  n_turns=$(jq "$urls | map(select(startswith(\"turns:\"))) | length" <<<"$2")
-  jq -e '[.iceServers | (if type=="array" then .[] else . end) | select(.username and .credential)] | length > 0' <<<"$2" >/dev/null \
-    || { echo "FAIL $1: no credentialed entries"; exit 1; }
-  echo "ok   $1: stun=$n_stun turn=$n_turn turns=$n_turns"
-}
-
-check "cloudflare direct" "$(mint "$TURN_KEY_ID" "$TURN_KEY_SECRET" 300)"
+labels=("cloudflare direct")
+bodies=("$(curl -sS --fail-with-body -X POST \
+  "https://rtc.live.cloudflare.com/v1/turn/keys/$TURN_KEY_ID/credentials/generate-ice-servers" \
+  -H "Authorization: Bearer $TURN_KEY_SECRET" \
+  -H "Content-Type: application/json" \
+  --data '{"ttl": 300}')")
 
 if [ -n "${WORKER_URL:-}" ]; then
   # Default test origin: the first one chosen in setup.sh.
-  check "worker $WORKER_URL" "$(curl -sS --fail-with-body "${WORKER_URL%/}/ice" -H "Origin: ${TEST_ORIGIN:-${ALLOWED_ORIGINS%%,*}}")"
+  labels+=("worker $WORKER_URL")
+  bodies+=("$(curl -sS --fail-with-body "${WORKER_URL%/}/ice" \
+    -H "Origin: ${TEST_ORIGIN:-${ALLOWED_ORIGINS%%,*}}")")
 fi
+
+for i in "${!labels[@]}"; do
+  read -r n_stun n_turn n_turns n_cred < <(jq -r '
+    [.iceServers | (if type == "array" then .[] else . end)] as $s
+    | [$s[].urls | (if type == "array" then .[] else . end)] as $u
+    | [ ($u | map(select(startswith("stun:")))  | length),
+        ($u | map(select(startswith("turn:")))  | length),
+        ($u | map(select(startswith("turns:"))) | length),
+        ($s | map(select(.username and .credential)) | length) ] | @tsv' <<<"${bodies[$i]}")
+  [ "$n_cred" -gt 0 ] || { echo "FAIL ${labels[$i]}: no credentialed entries"; exit 1; }
+  echo "ok   ${labels[$i]}: stun=$n_stun turn=$n_turn turns=$n_turns"
+done

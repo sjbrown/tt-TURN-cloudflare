@@ -50,8 +50,8 @@ No site names or secrets live in the repo.
 
 Run `bin/setup.sh` again. It asks for everything again (no defaults), creates
 a **new** TURN key, and moves the old `tt-turn.env` to
-`/tmp/tt-turn.env-<timestamp>`, printing that path. Nothing is ever
-overwritten. Run `bin/deploy.sh` afterwards to publish the change. Earlier
+`/tmp/tt-turn.env-<timestamp>` *first*, printing that path so you can look up
+your old values while answering. Nothing is ever overwritten. Run `bin/deploy.sh` afterwards to publish the change. Earlier
 keys stay active on Cloudflare until you delete them in
 the [dashboard](https://dash.cloudflare.com/?to=/:account/calls);
 `bin/status.sh` lists them.
@@ -133,6 +133,6 @@ indistinguishable from a normal one.
 The Cloudflare API response shape for key creation (`uid`/`key`) and the exact
 API-token permission name are written from docs, not yet exercised against a
 live account — run `bin/setup.sh` and `bin/test.sh` first and fix
-`create_key` in `bin/lib.sh` if the shape differs. The usage-cap GraphQL
+the create call in `bin/setup.sh` if the shape differs. The usage-cap GraphQL
 query (dataset and field names from the docs) is likewise untested; run
 `bin/usage.sh` before relying on it.
