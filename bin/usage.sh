@@ -4,7 +4,7 @@
 . "$(dirname "$0")/lib.sh"
 load_config
 
-tok=${CF_ANALYTICS_TOKEN:-$CF_API_TOKEN}   # needs "Account Analytics: Read"
+tok=$CF_ANALYTICS_TOKEN   # needs "Account Analytics: Read"
 to=$(date -u +%Y-%m-%d); from="${to%-*}-01"
 
 body=$(jq -n --arg acc "$CF_ACCOUNT_ID" --arg f "$from" --arg t "$to" '{query:

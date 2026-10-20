@@ -20,7 +20,7 @@ load_config() {
   # shellcheck disable=SC1090
   . "$CONFIG"
   local v missing=()
-  for v in CF_ACCOUNT_ID CF_API_TOKEN ALLOWED_ORIGINS TURN_KEY_ID TURN_KEY_SECRET; do
+  for v in CF_ACCOUNT_ID CF_API_TOKEN CF_ANALYTICS_TOKEN ALLOWED_ORIGINS TURN_KEY_ID TURN_KEY_SECRET; do
     [ -n "${!v:-}" ] || missing+=("$v")
   done
   [ "${#missing[@]}" -eq 0 ] || {
@@ -49,7 +49,7 @@ mint() {
 # create_key — creates a TURN key; sets TURN_KEY_ID and TURN_KEY_SECRET
 create_key() {
   local res
-  res=$(cf POST "" "$(jq -n --arg n "${TURN_KEY_NAME:-togetherness}" '{name:$n}')") || {
+  res=$(cf POST "" "$(jq -n --arg n "$TURN_KEY_NAME" '{name:$n}')") || {
     echo "creating the TURN key failed:" >&2; echo "$res" >&2; exit 1; }
   TURN_KEY_ID=$(jq -r '.result.uid // .result.id // empty' <<<"$res")
   TURN_KEY_SECRET=$(jq -r '.result.key // empty' <<<"$res")

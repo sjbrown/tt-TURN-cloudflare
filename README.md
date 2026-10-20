@@ -16,8 +16,8 @@ Togetherness-specific.
 
 | Path | Purpose |
 |---|---|
-| `bin/setup.sh` | Ask for settings, create a new TURN key, save it all, deploy. Re-run to change anything or rotate the key |
-| `bin/deploy.sh` | Push key into Worker secrets, `wrangler deploy`; refuses to run before setup |
+| `bin/setup.sh` | Ask for the four settings, create a new TURN key, save it all. Re-run to change anything or rotate the key |
+| `bin/deploy.sh` | Push the key into Worker secrets, `wrangler deploy`; refuses to run before setup |
 | `bin/status.sh` | List keys on the account, mark the current one |
 | `bin/usage.sh` | Month-to-date TURN egress (what Cloudflare bills on) |
 | `bin/test.sh` | Mint credentials, check for `turn:`/`turns:` URLs |
@@ -37,22 +37,22 @@ Worker. Nothing is installed globally.
 ## Quick start
 
 ```sh
-bin/setup.sh    # asks for your settings, makes the key, deploys
+bin/setup.sh    # asks for your settings, makes the key
+bin/deploy.sh   # publishes the Worker
 bin/test.sh
 ```
 
-`setup.sh` asks for your Cloudflare account ID, an API token, an optional
-analytics token (for the usage cap below) and which sites may call `/ice`.
-No site names or secrets live in the repo. To skip the prompts, put the
-values in the environment:
-`CF_ACCOUNT_ID=... CF_API_TOKEN=... ALLOWED_ORIGINS=a.com,b.io bin/setup.sh`.
+`setup.sh` asks for four things: your Cloudflare account ID, an API token, an
+analytics token (for the usage cap below), and which sites may call `/ice`.
+No site names or secrets live in the repo.
 
 ## Changing settings / rotating the key
 
 Run `bin/setup.sh` again. It asks for everything again (no defaults), creates
-a **new** TURN key, deploys it, and moves the old `tt-turn.env` to
+a **new** TURN key, and moves the old `tt-turn.env` to
 `/tmp/tt-turn.env-<timestamp>`, printing that path. Nothing is ever
-overwritten. Earlier keys stay active on Cloudflare until you delete them in
+overwritten. Run `bin/deploy.sh` afterwards to publish the change. Earlier
+keys stay active on Cloudflare until you delete them in
 the [dashboard](https://dash.cloudflare.com/?to=/:account/calls);
 `bin/status.sh` lists them.
 
@@ -113,8 +113,8 @@ indistinguishable from a normal one.
 - It only stops *new* credentials. Ones already issued work until
   `TTL_SECONDS` expires, so keep the TTL short. For an immediate cutoff,
   delete the key in the dashboard (or `bin/teardown.sh`).
-- Enable it: give `bin/setup.sh` an analytics token (Account Analytics:
-  Read). Check the numbers with `bin/usage.sh`.
+- It uses the analytics token (Account Analytics: Read) you give
+  `bin/setup.sh`. Check the numbers with `bin/usage.sh`.
 - Counts the calendar month (UTC) and the whole account's TURN egress, and
   ignores SFU traffic; Cloudflare's billing cycle and rounding may differ,
   hence the headroom.

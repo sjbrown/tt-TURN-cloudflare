@@ -13,13 +13,9 @@ export CLOUDFLARE_API_TOKEN="$CF_API_TOKEN"
 printf %s "$TURN_KEY_ID"     | npx --yes wrangler secret put TURN_KEY_ID
 printf %s "$TURN_KEY_SECRET" | npx --yes wrangler secret put TURN_KEY_API_TOKEN
 
-# Usage cap (optional): needs the account id and an Account Analytics: Read token.
-if [ -n "${CF_ANALYTICS_TOKEN:-}" ]; then
-  printf %s "$CF_ACCOUNT_ID"      | npx --yes wrangler secret put CF_ACCOUNT_ID
-  printf %s "$CF_ANALYTICS_TOKEN" | npx --yes wrangler secret put ANALYTICS_TOKEN
-else
-  echo "note: no analytics token in tt-turn.env; usage cap is disabled" >&2
-fi
+# Usage cap: needs the account id and the Account Analytics: Read token.
+printf %s "$CF_ACCOUNT_ID"      | npx --yes wrangler secret put CF_ACCOUNT_ID
+printf %s "$CF_ANALYTICS_TOKEN" | npx --yes wrangler secret put ANALYTICS_TOKEN
 
 # ALLOWED_ORIGINS is deliberately not in wrangler.toml; it comes from setup.sh.
 npx --yes wrangler deploy --var "ALLOWED_ORIGINS:$ALLOWED_ORIGINS"
