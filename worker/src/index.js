@@ -13,6 +13,43 @@
 // per Worker isolate, in the background — never on the request path — so the
 // check adds no latency and fails open (analytics errors never block joins).
 
+// ---------------------------------------------------------------------------
+// OPERATIONS: where to look when you want to check usage or debug.
+//
+// Verify usage manually (the cap trusts these numbers, so cross-check them):
+//   1. `bin/usage.sh` — runs the same GraphQL query this Worker uses and
+//      prints month-to-date TURN egress in GB. Start here.
+//   2. TURN analytics is GraphQL-only; the docs describe no dashboard chart.
+//      Query dataset `callsTurnUsageAdaptiveGroups` (fields: sum.egressBytes,
+//      dimensions keyId / username / datetimeHour ...) at
+//      https://api.cloudflare.com/client/v4/graphql with a token that has
+//      "Account Analytics: Read". Use curl or any GraphQL client (GraphiQL,
+//      Altair, Insomnia). Docs: https://developers.cloudflare.com/realtime/turn/analytics/
+//   3. Billing: dash.cloudflare.com -> Billing -> Billable Usage (daily
+//      granularity; Pay-as-you-go accounts). Cloudflare's docs don't say
+//      whether Realtime TURN is itemized there, and call the monthly invoice
+//      the authoritative number. Budget alerts live in the same area
+//      (email-only, informational, no hard cap).
+//   4. TURN keys (list / create / delete): https://dash.cloudflare.com/?to=/:account/calls
+//      or `bin/status.sh`.
+//   5. Free tier and price ($0.05/GB after 1,000 GB/month):
+//      https://developers.cloudflare.com/realtime/turn/faq/
+//
+// Logs:
+//   - This Worker deliberately logs nothing. Workers Logs is OFF by default,
+//     and the usage check swallows analytics errors (it fails open), so a
+//     wrong query shows up as "cap never triggers", not as an error. If the
+//     cap seems dead, run `bin/usage.sh` — it prints the real error.
+//   - Live: `npx wrangler tail` (from worker/) streams requests and
+//     exceptions while it runs; nothing is stored.
+//   - Stored: enable the [observability] block in wrangler.toml (commented
+//     out by default; invocation logs record request metadata, so it's an
+//     opt-in) and redeploy, then view them at dash.cloudflare.com ->
+//     Workers & Pages -> tt-turn-credentials -> Observability. Retention is
+//     3 days (Free) / 7 days (Paid). Docs:
+//     https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+// ---------------------------------------------------------------------------
+
 const UPSTREAM = 'https://rtc.live.cloudflare.com/v1/turn/keys';
 const GRAPHQL = 'https://api.cloudflare.com/client/v4/graphql';
 const STUN_ONLY = [{ urls: ['stun:stun.cloudflare.com:3478'] }];
@@ -47,7 +84,9 @@ function knownUsageBytes(env, ctx) {
   if (stale && !usage.pending) {
     usage.pending = fetchUsage(env)
       .then((u) => Object.assign(usage, u, { at: Date.now() }))
-      .catch(() => { usage.at = Date.now() - REFRESH_MS + RETRY_MS; }) // keep last value, retry soon
+      // Fail open: keep the last value, retry soon. Errors are not logged on
+      // purpose; debug with `bin/usage.sh` (see OPERATIONS above).
+      .catch(() => { usage.at = Date.now() - REFRESH_MS + RETRY_MS; })
       .finally(() => { usage.pending = null; });
     ctx.waitUntil(usage.pending);
   }

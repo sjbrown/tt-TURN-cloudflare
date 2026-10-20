@@ -2,6 +2,13 @@ name = "tt-turn-credentials"
 main = "src/index.js"
 compatibility_date = "2026-10-01"
 
+# Stored logs (off by default; invocation logs record request metadata, so
+# this is an opt-in). Uncomment, redeploy, then view at dash.cloudflare.com ->
+# Workers & Pages -> tt-turn-credentials -> Observability. Needs wrangler >= 3.78.6.
+# [observability]
+# enabled = true
+# head_sampling_rate = 1
+
 [vars]
 # Comma-separated list of origins allowed to call /ice. Edit for your deployment.
 ALLOWED_ORIGINS = "https://www.1kfa.com"
