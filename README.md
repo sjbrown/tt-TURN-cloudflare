@@ -10,14 +10,14 @@ corporate/hotel networks). Document content is still end-to-end encrypted
 connect at all. With it, they connect via relay.
 
 Licensed under the GPLv3 (see `LICENSE`). Forks welcome — nothing here is
-Togetherness-specific except the default allowed origin.
+Togetherness-specific.
 
 ## What's in the box
 
 | Path | Purpose |
 |---|---|
-| `bin/setup.sh` | Create a TURN key, deploy the Worker |
-| `bin/deploy.sh` | Push key into Worker secrets, `wrangler deploy` |
+| `bin/setup.sh` | Prompt for allowed origins, create a TURN key, deploy (safe to re-run) |
+| `bin/deploy.sh` | Push key into Worker secrets, `wrangler deploy`; refuses to run before setup |
 | `bin/rotate.sh` | New key → deploy → later `--finish` deletes the old one |
 | `bin/status.sh` | List keys on the account, mark current/old |
 | `bin/usage.sh` | Month-to-date TURN egress (what Cloudflare bills on) |
@@ -38,10 +38,14 @@ Worker. Nothing is installed globally.
 
 ```sh
 cp .env.example .env      # fill in CF_ACCOUNT_ID and CF_API_TOKEN
-$EDITOR worker/wrangler.toml   # set ALLOWED_ORIGINS
-bin/setup.sh
+bin/setup.sh              # asks which sites may call /ice, makes the key, deploys
 bin/test.sh
 ```
+
+`setup.sh` records your answer in `.setup.json` (gitignored) and `deploy.sh`
+injects it at deploy time, so no site names live in the repo. Re-run
+`bin/setup.sh` to change them; `ALLOWED_ORIGINS=a.com,b.io bin/setup.sh`
+skips the prompt.
 
 Cloudflare Realtime TURN: $0.05/GB egress after a 1,000 GB/month free tier
 ([FAQ](https://developers.cloudflare.com/realtime/turn/faq/)). Document sync

@@ -10,8 +10,9 @@ compatibility_date = "2026-10-01"
 # head_sampling_rate = 1
 
 [vars]
-# Comma-separated list of origins allowed to call /ice. Edit for your deployment.
-ALLOWED_ORIGINS = "https://www.1kfa.com"
+# ALLOWED_ORIGINS is intentionally not set here. bin/setup.sh asks for it and
+# bin/deploy.sh injects it with `wrangler deploy --var`. (Deploying without it
+# leaves /ice rejecting every browser origin.)
 # Credential lifetime. Must exceed the longest session you expect.
 TTL_SECONDS = "86400"
 # Stop minting TURN credentials (STUN only) once month-to-date egress reaches

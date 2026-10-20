@@ -5,7 +5,8 @@
 //
 // Secrets: TURN_KEY_ID, TURN_KEY_API_TOKEN
 //          CF_ACCOUNT_ID, ANALYTICS_TOKEN   (optional: enable the usage cap)
-// Vars:    ALLOWED_ORIGINS, TTL_SECONDS, USAGE_LIMIT_GB
+// Vars:    ALLOWED_ORIGINS (injected by bin/deploy.sh from bin/setup.sh),
+//          TTL_SECONDS, USAGE_LIMIT_GB
 //
 // Usage cap (lazy kill switch): once month-to-date TURN egress reaches
 // USAGE_LIMIT_GB, /ice stops minting TURN credentials and returns STUN only.

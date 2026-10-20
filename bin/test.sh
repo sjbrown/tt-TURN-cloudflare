@@ -17,5 +17,5 @@ check() { # label json
 check "cloudflare direct" "$(mint "$(jq -r .id "$KEYFILE")" "$(jq -r .secret "$KEYFILE")" 300)"
 
 if [ -n "${WORKER_URL:-}" ]; then
-  check "worker $WORKER_URL" "$(curl -sS --fail-with-body "${WORKER_URL%/}/ice" -H "Origin: ${TEST_ORIGIN:-https://www.1kfa.com}")"
+  check "worker $WORKER_URL" "$(curl -sS --fail-with-body "${WORKER_URL%/}/ice" -H "Origin: ${TEST_ORIGIN:-$(jq -r '.allowed_origins | split(",")[0]' "$SETUPFILE")}")"
 fi
