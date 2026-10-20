@@ -49,13 +49,12 @@ values in the environment:
 
 ## Changing settings / rotating the key
 
-Run `bin/setup.sh` again. Enter keeps each previous answer. Every run creates
+Run `bin/setup.sh` again. It asks for everything again (no defaults), creates
 a **new** TURN key, deploys it, and moves the old `tt-turn.env` to
-`/tmp/tt-turn.env-<timestamp>` (it announces the path; nothing is ever
-overwritten). The previous key stays active so sessions on it keep relaying;
-delete it in the
-[dashboard](https://dash.cloudflare.com/?to=/:account/calls) once they're
-over. `bin/status.sh` lists the keys.
+`/tmp/tt-turn.env-<timestamp>`, printing that path. Nothing is ever
+overwritten. Earlier keys stay active on Cloudflare until you delete them in
+the [dashboard](https://dash.cloudflare.com/?to=/:account/calls);
+`bin/status.sh` lists them.
 
 Cloudflare Realtime TURN: $0.05/GB egress after a 1,000 GB/month free tier
 ([FAQ](https://developers.cloudflare.com/realtime/turn/faq/)). Document sync
