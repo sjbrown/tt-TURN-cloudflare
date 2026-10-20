@@ -90,7 +90,10 @@ export default {
 
     // Kill switch: STUN only. Same response shape, so clients need no changes.
     if (overLimit(env, ctx)) {
-      return new Response(JSON.stringify({ iceServers: STUN_ONLY, ttl: 0, relay: false }), { headers: json });
+      return new Response(
+        JSON.stringify({ iceServers: STUN_ONLY, ttl: 0, relay: false, reason: 'usage-cap' }),
+        { headers: json },
+      );
     }
 
     const ttl = Math.max(60, Number(env.TTL_SECONDS) || 86400);

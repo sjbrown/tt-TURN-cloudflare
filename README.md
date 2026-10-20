@@ -85,8 +85,20 @@ bin/rotate.sh --finish   # delete the old key
 Cloudflare's budget alerts are email-only and informational; there is no
 hard spending cap. So the Worker enforces its own: once month-to-date TURN
 egress reaches `USAGE_LIMIT_GB` (default 600 of the 1,000 GB free), `/ice`
-returns STUN only (`relay: false`) instead of TURN credentials. Clients keep
-working; peers who need the relay just can't connect.
+returns STUN only instead of TURN credentials. Clients keep working; peers
+who need the relay just can't connect.
+
+Response shape (both are HTTP 200, same fields, so clients need no changes):
+
+```jsonc
+{ "iceServers": [...], "ttl": 86400, "relay": true }                         // normal
+{ "iceServers": [{ "urls": ["stun:..."] }], "ttl": 0, "relay": false,
+  "reason": "usage-cap" }                                                    // capped
+```
+
+Check `relay === false` (and `reason`) to show a notice. Errors (403 bad
+origin, 502 upstream) are plain-text, not JSON. A fail-open response is
+indistinguishable from a normal one.
 
 - Usage comes from the
   [TURN analytics](https://developers.cloudflare.com/realtime/turn/analytics/)
