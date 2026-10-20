@@ -9,8 +9,8 @@ corporate/hotel networks). Document content is still end-to-end encrypted
 (DTLS); the relay just forwards bytes. Without TURN, those users fail to
 connect at all. With it, they connect via relay.
 
-Public domain. Forks welcome — nothing here is Togetherness-specific except
-the default allowed origin.
+Licensed under the GPLv3 (see `LICENSE`). Forks welcome — nothing here is
+Togetherness-specific except the default allowed origin.
 
 ## What's in the box
 
