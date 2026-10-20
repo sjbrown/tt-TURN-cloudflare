@@ -1,0 +1,6 @@
+.env
+.turn-key.json
+.turn-key.old.json
+worker/.wrangler/
+worker/node_modules/
+node_modules/

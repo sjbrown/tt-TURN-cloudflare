@@ -1,0 +1,9 @@
+name = "tt-turn-credentials"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Comma-separated list of origins allowed to call /ice. Edit for your deployment.
+ALLOWED_ORIGINS = "https://www.1kfa.com"
+# Credential lifetime. Must exceed the longest session you expect.
+TTL_SECONDS = "86400"
