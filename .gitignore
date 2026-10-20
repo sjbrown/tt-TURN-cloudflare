@@ -1,7 +1,5 @@
-.env
-.turn-key.json
-.turn-key.old.json
-.setup.json
+# All settings plus the TURN key (secret): written by bin/setup.sh
+tt-turn.env
 worker/.wrangler/
 worker/node_modules/
 node_modules/

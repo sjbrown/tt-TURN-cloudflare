@@ -16,17 +16,17 @@ Togetherness-specific.
 
 | Path | Purpose |
 |---|---|
-| `bin/setup.sh` | Prompt for allowed origins, create a TURN key, deploy (safe to re-run) |
+| `bin/setup.sh` | Ask for settings, create a new TURN key, save it all, deploy. Re-run to change anything or rotate the key |
 | `bin/deploy.sh` | Push key into Worker secrets, `wrangler deploy`; refuses to run before setup |
-| `bin/rotate.sh` | New key → deploy → later `--finish` deletes the old one |
-| `bin/status.sh` | List keys on the account, mark current/old |
+| `bin/status.sh` | List keys on the account, mark the current one |
 | `bin/usage.sh` | Month-to-date TURN egress (what Cloudflare bills on) |
 | `bin/test.sh` | Mint credentials, check for `turn:`/`turns:` URLs |
-| `bin/teardown.sh` | Delete keys and Worker |
+| `bin/teardown.sh` | Delete the key and Worker |
 | `worker/` | Tiny stateless Worker: `GET /ice` → short-lived ICE servers |
 
-The long-lived TURN key lives only in `.turn-key.json` (mode 600, gitignored)
-and in the Worker's secrets. Browsers only ever see credentials that expire
+Everything you enter (account ID, API tokens, allowed origins) and the
+long-lived TURN key live in one file, `tt-turn.env` (mode 600, gitignored),
+plus the Worker's secrets. Browsers only ever see credentials that expire
 (default 24h).
 
 ## Dependencies
@@ -37,15 +37,25 @@ Worker. Nothing is installed globally.
 ## Quick start
 
 ```sh
-cp .env.example .env      # fill in CF_ACCOUNT_ID and CF_API_TOKEN
-bin/setup.sh              # asks which sites may call /ice, makes the key, deploys
+bin/setup.sh    # asks for your settings, makes the key, deploys
 bin/test.sh
 ```
 
-`setup.sh` records your answer in `.setup.json` (gitignored) and `deploy.sh`
-injects it at deploy time, so no site names live in the repo. Re-run
-`bin/setup.sh` to change them; `ALLOWED_ORIGINS=a.com,b.io bin/setup.sh`
-skips the prompt.
+`setup.sh` asks for your Cloudflare account ID, an API token, an optional
+analytics token (for the usage cap below) and which sites may call `/ice`.
+No site names or secrets live in the repo. To skip the prompts, put the
+values in the environment:
+`CF_ACCOUNT_ID=... CF_API_TOKEN=... ALLOWED_ORIGINS=a.com,b.io bin/setup.sh`.
+
+## Changing settings / rotating the key
+
+Run `bin/setup.sh` again. Enter keeps each previous answer. Every run creates
+a **new** TURN key, deploys it, and moves the old `tt-turn.env` to
+`/tmp/tt-turn.env-<timestamp>` (it announces the path; nothing is ever
+overwritten). The previous key stays active so sessions on it keep relaying;
+delete it in the
+[dashboard](https://dash.cloudflare.com/?to=/:account/calls) once they're
+over. `bin/status.sh` lists the keys.
 
 Cloudflare Realtime TURN: $0.05/GB egress after a 1,000 GB/month free tier
 ([FAQ](https://developers.cloudflare.com/realtime/turn/faq/)). Document sync
@@ -76,14 +86,6 @@ const provider = new WebrtcProvider(tableId, ydoc, {
 `peerOpts` is spread into `simple-peer`'s options (see `src/lib/y-webrtc.js`),
 so `config.iceServers` replaces its built-in Google/Twilio STUN default.
 
-## Rotation
-
-```sh
-bin/rotate.sh            # new key live immediately
-# ...wait TTL_SECONDS (24h by default)...
-bin/rotate.sh --finish   # delete the old key
-```
-
 ## Usage cap (stay in the free tier)
 
 Cloudflare's budget alerts are email-only and informational; there is no
@@ -111,9 +113,9 @@ indistinguishable from a normal one.
   down or unconfigured, TURN keeps working.
 - It only stops *new* credentials. Ones already issued work until
   `TTL_SECONDS` expires, so keep the TTL short. For an immediate cutoff,
-  delete the key (`bin/teardown.sh`, or `bin/rotate.sh` then `--finish`).
-- Enable it: set `CF_ANALYTICS_TOKEN` (Account Analytics: Read) in `.env`
-  and re-run `bin/deploy.sh`. Check the numbers with `bin/usage.sh`.
+  delete the key in the dashboard (or `bin/teardown.sh`).
+- Enable it: give `bin/setup.sh` an analytics token (Account Analytics:
+  Read). Check the numbers with `bin/usage.sh`.
 - Counts the calendar month (UTC) and the whole account's TURN egress, and
   ignores SFU traffic; Cloudflare's billing cycle and rounding may differ,
   hence the headroom.
