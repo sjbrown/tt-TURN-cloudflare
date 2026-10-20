@@ -16,12 +16,12 @@ Togetherness-specific except the default allowed origin.
 
 | Path | Purpose |
 |---|---|
-| `scripts/setup.sh` | Create a TURN key, deploy the Worker |
-| `scripts/deploy.sh` | Push key into Worker secrets, `wrangler deploy` |
-| `scripts/rotate.sh` | New key → deploy → later `--finish` deletes the old one |
-| `scripts/status.sh` | List keys on the account, mark current/old |
-| `scripts/test.sh` | Mint credentials, check for `turn:`/`turns:` URLs |
-| `scripts/teardown.sh` | Delete keys and Worker |
+| `bin/setup.sh` | Create a TURN key, deploy the Worker |
+| `bin/deploy.sh` | Push key into Worker secrets, `wrangler deploy` |
+| `bin/rotate.sh` | New key → deploy → later `--finish` deletes the old one |
+| `bin/status.sh` | List keys on the account, mark current/old |
+| `bin/test.sh` | Mint credentials, check for `turn:`/`turns:` URLs |
+| `bin/teardown.sh` | Delete keys and Worker |
 | `worker/` | Tiny stateless Worker: `GET /ice` → short-lived ICE servers |
 
 The long-lived TURN key lives only in `.turn-key.json` (mode 600, gitignored)
@@ -38,8 +38,8 @@ Worker. Nothing is installed globally.
 ```sh
 cp .env.example .env      # fill in CF_ACCOUNT_ID and CF_API_TOKEN
 $EDITOR worker/wrangler.toml   # set ALLOWED_ORIGINS
-scripts/setup.sh
-scripts/test.sh
+bin/setup.sh
+bin/test.sh
 ```
 
 Cloudflare Realtime TURN: $0.05/GB egress after a 1,000 GB/month free tier
@@ -74,9 +74,9 @@ so `config.iceServers` replaces its built-in Google/Twilio STUN default.
 ## Rotation
 
 ```sh
-scripts/rotate.sh            # new key live immediately
+bin/rotate.sh            # new key live immediately
 # ...wait TTL_SECONDS (24h by default)...
-scripts/rotate.sh --finish   # delete the old key
+bin/rotate.sh --finish   # delete the old key
 ```
 
 ## Hardening notes
@@ -92,5 +92,5 @@ scripts/rotate.sh --finish   # delete the old key
 
 The Cloudflare API response shape for key creation (`uid`/`key`) and the exact
 API-token permission name are written from docs, not yet exercised against a
-live account — run `scripts/setup.sh` and `scripts/test.sh` first and fix
-`create_key` in `scripts/lib.sh` if the shape differs.
+live account — run `bin/setup.sh` and `bin/test.sh` first and fix
+`create_key` in `bin/lib.sh` if the shape differs.

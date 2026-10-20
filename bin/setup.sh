@@ -9,5 +9,5 @@ create_key "${TURN_KEY_NAME:-togetherness}" "$KEYFILE"
 echo "created TURN key $(jq -r .id "$KEYFILE") -> $KEYFILE (secret, mode 600, gitignored)"
 
 if [ "${1:-}" != "--no-deploy" ]; then
-  "$ROOT/scripts/deploy.sh"
+  "$ROOT/bin/deploy.sh"
 fi

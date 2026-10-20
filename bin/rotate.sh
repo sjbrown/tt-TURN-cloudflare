@@ -21,5 +21,5 @@ mv "$KEYFILE" "$OLDKEYFILE"
 create_key "${TURN_KEY_NAME:-togetherness}" "$KEYFILE" || { mv "$OLDKEYFILE" "$KEYFILE"; exit 1; }
 echo "new key $(jq -r .id "$KEYFILE"); old key $(jq -r .id "$OLDKEYFILE") kept for now"
 
-"$ROOT/scripts/deploy.sh"
-echo "after the TTL has elapsed, run: scripts/rotate.sh --finish"
+"$ROOT/bin/deploy.sh"
+echo "after the TTL has elapsed, run: bin/rotate.sh --finish"
