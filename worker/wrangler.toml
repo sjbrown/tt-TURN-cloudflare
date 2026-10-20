@@ -7,3 +7,7 @@ compatibility_date = "2026-10-01"
 ALLOWED_ORIGINS = "https://www.1kfa.com"
 # Credential lifetime. Must exceed the longest session you expect.
 TTL_SECONDS = "86400"
+# Stop minting TURN credentials (STUN only) once month-to-date egress reaches
+# this many GB. Free tier is 1,000 GB; leave headroom for analytics lag.
+# Set to "0" to disable. Needs the CF_ACCOUNT_ID and ANALYTICS_TOKEN secrets.
+USAGE_LIMIT_GB = "600"

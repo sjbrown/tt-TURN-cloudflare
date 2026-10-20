@@ -20,6 +20,7 @@ Togetherness-specific except the default allowed origin.
 | `bin/deploy.sh` | Push key into Worker secrets, `wrangler deploy` |
 | `bin/rotate.sh` | New key → deploy → later `--finish` deletes the old one |
 | `bin/status.sh` | List keys on the account, mark current/old |
+| `bin/usage.sh` | Month-to-date TURN egress (what Cloudflare bills on) |
 | `bin/test.sh` | Mint credentials, check for `turn:`/`turns:` URLs |
 | `bin/teardown.sh` | Delete keys and Worker |
 | `worker/` | Tiny stateless Worker: `GET /ice` → short-lived ICE servers |
@@ -79,6 +80,28 @@ bin/rotate.sh            # new key live immediately
 bin/rotate.sh --finish   # delete the old key
 ```
 
+## Usage cap (stay in the free tier)
+
+Cloudflare's budget alerts are email-only and informational; there is no
+hard spending cap. So the Worker enforces its own: once month-to-date TURN
+egress reaches `USAGE_LIMIT_GB` (default 600 of the 1,000 GB free), `/ice`
+returns STUN only (`relay: false`) instead of TURN credentials. Clients keep
+working; peers who need the relay just can't connect.
+
+- Usage comes from the
+  [TURN analytics](https://developers.cloudflare.com/realtime/turn/analytics/)
+  GraphQL dataset, refreshed in the background at most every 10 minutes per
+  Worker isolate. It never delays a request and fails open: if analytics is
+  down or unconfigured, TURN keeps working.
+- It only stops *new* credentials. Ones already issued work until
+  `TTL_SECONDS` expires, so keep the TTL short. For an immediate cutoff,
+  delete the key (`bin/teardown.sh`, or `bin/rotate.sh` then `--finish`).
+- Enable it: set `CF_ANALYTICS_TOKEN` (Account Analytics: Read) in `.env`
+  and re-run `bin/deploy.sh`. Check the numbers with `bin/usage.sh`.
+- Counts the calendar month (UTC) and the whole account's TURN egress, and
+  ignores SFU traffic; Cloudflare's billing cycle and rounding may differ,
+  hence the headroom.
+
 ## Hardening notes
 
 - `ALLOWED_ORIGINS` blocks other websites' browsers, not scripts. Add a
@@ -93,4 +116,6 @@ bin/rotate.sh --finish   # delete the old key
 The Cloudflare API response shape for key creation (`uid`/`key`) and the exact
 API-token permission name are written from docs, not yet exercised against a
 live account — run `bin/setup.sh` and `bin/test.sh` first and fix
-`create_key` in `bin/lib.sh` if the shape differs.
+`create_key` in `bin/lib.sh` if the shape differs. The usage-cap GraphQL
+query (dataset and field names from the docs) is likewise untested; run
+`bin/usage.sh` before relying on it.
