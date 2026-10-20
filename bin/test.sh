@@ -3,7 +3,7 @@
 # in the environment, also hits the deployed Worker. Never prints credentials.
 #   bin/test.sh
 #   WORKER_URL=https://tt-turn-credentials.<you>.workers.dev bin/test.sh
-. "$(dirname "$0")/lib.sh"
+. "$(dirname "$0")/read_config.sh"
 
 labels=("cloudflare direct")
 bodies=("$(curl -sS --fail-with-body -X POST \

@@ -18,7 +18,7 @@
 // OPERATIONS: where to look when you want to check usage or debug.
 //
 // Verify usage manually (the cap trusts these numbers, so cross-check them):
-//   1. `bin/usage.sh` — runs the same GraphQL query this Worker uses and
+//   1. `bin/check_usage.sh` — runs the same GraphQL query this Worker uses and
 //      prints month-to-date TURN egress in GB. Start here.
 //   2. TURN analytics is GraphQL-only; the docs describe no dashboard chart.
 //      Query dataset `callsTurnUsageAdaptiveGroups` (fields: sum.egressBytes,
@@ -40,7 +40,7 @@
 //   - This Worker deliberately logs nothing. Workers Logs is OFF by default,
 //     and the usage check swallows analytics errors (it fails open), so a
 //     wrong query shows up as "cap never triggers", not as an error. If the
-//     cap seems dead, run `bin/usage.sh` — it prints the real error.
+//     cap seems dead, run `bin/check_usage.sh` — it prints the real error.
 //   - Live: `npx wrangler tail` (from worker/) streams requests and
 //     exceptions while it runs; nothing is stored.
 //   - Stored: enable the [observability] block in wrangler.toml (commented
@@ -86,7 +86,7 @@ function knownUsageBytes(env, ctx) {
     usage.pending = fetchUsage(env)
       .then((u) => Object.assign(usage, u, { at: Date.now() }))
       // Fail open: keep the last value, retry soon. Errors are not logged on
-      // purpose; debug with `bin/usage.sh` (see OPERATIONS above).
+      // purpose; debug with `bin/check_usage.sh` (see OPERATIONS above).
       .catch(() => { usage.at = Date.now() - REFRESH_MS + RETRY_MS; })
       .finally(() => { usage.pending = null; });
     ctx.waitUntil(usage.pending);

@@ -19,7 +19,7 @@ Togetherness-specific.
 | `bin/setup.sh` | Ask for the four settings, create a new TURN key, save it all. Re-run to change anything or rotate the key |
 | `bin/deploy.sh` | Push the key into Worker secrets, `wrangler deploy`; refuses to run before setup |
 | `bin/status.sh` | List keys on the account, mark the current one |
-| `bin/usage.sh` | Month-to-date TURN egress (what Cloudflare bills on) |
+| `bin/check_usage.sh` | Month-to-date TURN egress (what Cloudflare bills on) |
 | `bin/test.sh` | Mint credentials, check for `turn:`/`turns:` URLs |
 | `bin/teardown.sh` | Delete the key and Worker |
 | `worker/` | Tiny stateless Worker: `GET /ice` → short-lived ICE servers |
@@ -49,9 +49,10 @@ No site names or secrets live in the repo.
 ## Changing settings / rotating the key
 
 Run `bin/setup.sh` again. It asks for everything again (no defaults), creates
-a **new** TURN key, and moves the old `tt-turn.env` to
-`/tmp/tt-turn.env-<timestamp>` *first*, printing that path so you can look up
-your old values while answering. Nothing is ever overwritten. Run `bin/deploy.sh` afterwards to publish the change. Earlier
+a **new** TURN key, and first copies the old `tt-turn.env` to
+`/tmp/tt-turn.env-<timestamp>`, printing that path so you can look up your old
+values while answering. The original stays in place until the new file is
+written, so a failed run changes nothing. Run `bin/deploy.sh` afterwards to publish the change. Earlier
 keys stay active on Cloudflare until you delete them in
 the [dashboard](https://dash.cloudflare.com/?to=/:account/calls);
 `bin/status.sh` lists them.
@@ -114,7 +115,7 @@ indistinguishable from a normal one.
   `TTL_SECONDS` expires, so keep the TTL short. For an immediate cutoff,
   delete the key in the dashboard (or `bin/teardown.sh`).
 - It uses the analytics token (Account Analytics: Read) you give
-  `bin/setup.sh`. Check the numbers with `bin/usage.sh`.
+  `bin/setup.sh`. Check the numbers with `bin/check_usage.sh`.
 - Counts the calendar month (UTC) and the whole account's TURN egress, and
   ignores SFU traffic; Cloudflare's billing cycle and rounding may differ,
   hence the headroom.
@@ -135,4 +136,4 @@ API-token permission name are written from docs, not yet exercised against a
 live account — run `bin/setup.sh` and `bin/test.sh` first and fix
 the create call in `bin/setup.sh` if the shape differs. The usage-cap GraphQL
 query (dataset and field names from the docs) is likewise untested; run
-`bin/usage.sh` before relying on it.
+`bin/check_usage.sh` before relying on it.

@@ -2,7 +2,7 @@
 # Push the TURN key into the Worker's secrets and deploy the Worker.
 # Refuses to run until bin/setup.sh has completed. Only extra dependency: node
 # (for `npx wrangler`).
-. "$(dirname "$0")/lib.sh"   # loads tt-turn.env, or exits with "run bin/setup.sh first"
+. "$(dirname "$0")/read_config.sh"   # loads tt-turn.env, or exits with "run bin/setup.sh first"
 command -v npx >/dev/null 2>&1 || { echo "missing dependency: npx (node)" >&2; exit 1; }
 
 cd "$ROOT/worker"

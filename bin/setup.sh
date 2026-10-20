@@ -3,8 +3,9 @@
 # to tt-turn.env. Then run bin/deploy.sh to publish the Worker.
 #
 # Run it again any time to change a setting or rotate the key. An existing
-# tt-turn.env is moved to /tmp/tt-turn.env-<timestamp> FIRST (path printed), so
-# you can look up your old values while answering. It's never overwritten or deleted.
+# tt-turn.env is first COPIED to /tmp/tt-turn.env-<timestamp> (path printed), so
+# you can look up your old values while answering. The original stays in place
+# until the new one is written, so a failed run changes nothing.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -16,8 +17,8 @@ done
 
 if [ -e "$CONFIG" ]; then
   bak="/tmp/tt-turn.env-$(date +%Y%m%d-%H%M%S)"
-  mv "$CONFIG" "$bak"
-  echo "moved the existing tt-turn.env to $bak (it holds secrets; delete it when you're done with it)"
+  cp "$CONFIG" "$bak"
+  echo "copied the existing tt-turn.env to $bak (it holds secrets; delete it when you're done with it)"
 fi
 
 read -r -p "Cloudflare account ID: " CF_ACCOUNT_ID || true
