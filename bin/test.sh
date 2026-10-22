@@ -10,8 +10,8 @@
 # (default: the first allowed origin from setup).
 . "$(dirname "$0")/read_config.sh"
 
-titles=(); proves=(); requests=(); expects=(); statuses=(); bodies=()
-expect_common='HTTP 200 and a JSON body whose "iceServers" include a stun: URL, a turn: URL, a turns: URL, and an entry with a username + credential'
+titles=(); proves=(); requests=(); expects=(); want_re=(); want_txt=(); statuses=(); bodies=()
+expect_body='a JSON body whose "iceServers" include a stun: URL, a turn: URL, a turns: URL, and an entry with a username + credential'
 
 # TEST 1: ask Cloudflare directly, with the TURN key from tt-turn.env.
 url="https://rtc.live.cloudflare.com/v1/turn/keys/$TURN_KEY_ID/credentials/generate-ice-servers"
@@ -22,7 +22,8 @@ raw=$(curl -sS -w $'\n%{http_code}' -X POST "$url" \
 titles+=("Cloudflare issues TURN credentials for your TURN key")
 proves+=("the TURN key ID and secret in tt-turn.env are valid")
 requests+=("POST $url   (sends the TURN key secret, hidden; body {\"ttl\": 300} = a credential that expires in 5 minutes)")
-expects+=("$expect_common")
+expects+=("HTTP 2xx (Cloudflare answers 201 Created) and $expect_body")
+want_re+=('^2'); want_txt+=("2xx (Cloudflare answers 201 Created)")
 statuses+=("${raw##*$'\n'}"); bodies+=("${raw%$'\n'*}")
 
 # TEST 2 (only with WORKER_URL): ask the deployed Worker, as a browser would.
@@ -33,7 +34,8 @@ if [ -n "${WORKER_URL:-}" ]; then
   titles+=("Your deployed Worker serves credentials to an allowed website")
   proves+=("the Worker is deployed, holds the right key, and accepts the origin $origin")
   requests+=("GET $url   (header Origin: $origin)")
-  expects+=("$expect_common. A Worker over its usage cap answers with STUN only (relay=false), which fails the turn:, turns: and credential checks")
+  expects+=("HTTP 200 and $expect_body. A Worker over its usage cap answers with STUN only (relay=false), which fails the turn:, turns: and credential checks")
+  want_re+=('^200$'); want_txt+=("200")
   statuses+=("${raw##*$'\n'}"); bodies+=("${raw%$'\n'*}")
 fi
 
@@ -60,8 +62,8 @@ for i in "${!titles[@]}"; do
         ($s | map(select(.username and .credential)) | length) ] | @tsv' <<<"$body" 2>/dev/null || true) || true
   n_stun=${n_stun:-0}; n_turn=${n_turn:-0}; n_turns=${n_turns:-0}; n_cred=${n_cred:-0}
 
-  names=("HTTP status is 200" "response has a stun: URL" "response has a turn: URL" "response has a turns: URL" "an entry has a username + credential")
-  oks=("$([ "$status" = 200 ] && echo 1 || echo 0)" "$((n_stun > 0))" "$((n_turn > 0))" "$((n_turns > 0))" "$((n_cred > 0))")
+  names=("HTTP status is ${want_txt[$i]}" "response has a stun: URL" "response has a turn: URL" "response has a turns: URL" "an entry has a username + credential")
+  oks=("$([[ $status =~ ${want_re[$i]} ]] && echo 1 || echo 0)" "$((n_stun > 0))" "$((n_turn > 0))" "$((n_turns > 0))" "$((n_cred > 0))")
   details=("got $status" "$n_stun found" "$n_turn found" "$n_turns found" "$n_cred found")
   for j in "${!names[@]}"; do
     if [ "${oks[$j]}" = 1 ]; then
