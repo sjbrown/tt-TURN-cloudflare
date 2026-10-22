@@ -105,6 +105,10 @@ handles them:
   "reason": "usage-cap" }                                                    // capped
 ```
 
+To exercise the capped-state UI without reaching the cap, call
+`GET /mock-cap-hit` on the Worker (same origin rules as `/ice`). It returns the
+capped response above, byte for byte, mints no credentials and reads no usage.
+
 Check `relay === false` (and `reason`) to show a notice. Errors (403 for an
 unlisted origin, 502 for an upstream failure) return plain text. When the
 usage check can't run, the Worker serves credentials as usual (fail open), and

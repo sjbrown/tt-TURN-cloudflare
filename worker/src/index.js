@@ -1,7 +1,9 @@
 // Mints short-lived Cloudflare Realtime TURN credentials so the long-lived
 // TURN key never reaches the browser. No state, no logging of requests.
 //
-//   GET /ice  ->  { "iceServers": [ { urls: [...], username, credential }, ... ] }
+//   GET /ice            ->  { "iceServers": [ { urls: [...], username, credential }, ... ] }
+//   GET /mock-cap-hit   ->  the response /ice gives once the usage cap is hit
+//                           (STUN only, relay=false), for testing client UI
 //
 // Secrets: TURN_KEY_ID, TURN_KEY_API_TOKEN
 //          CF_ACCOUNT_ID, ANALYTICS_TOKEN   (optional: enable the usage cap)
@@ -54,6 +56,9 @@
 const UPSTREAM = 'https://rtc.live.cloudflare.com/v1/turn/keys';
 const GRAPHQL = 'https://api.cloudflare.com/client/v4/graphql';
 const STUN_ONLY = [{ urls: ['stun:stun.cloudflare.com:3478'] }];
+// The capped response: /ice returns it once the usage cap is hit, and
+// /mock-cap-hit returns it on demand, so the mock always matches the real thing.
+const CAPPED = JSON.stringify({ iceServers: STUN_ONLY, ttl: 0, relay: false, reason: 'usage-cap' });
 const REFRESH_MS = 10 * 60 * 1000;
 const RETRY_MS = 60 * 1000;
 
@@ -124,17 +129,16 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
 
     const { pathname } = new URL(req.url);
-    if (req.method !== 'GET' || pathname !== '/ice') {
+    if (req.method !== 'GET' || (pathname !== '/ice' && pathname !== '/mock-cap-hit')) {
       return new Response('not found', { status: 404, headers: cors });
     }
 
+    // Test hook for client UI work: answers as if the usage cap was hit. It mints
+    // no credentials and reads no usage, so calling it costs nothing.
+    if (pathname === '/mock-cap-hit') return new Response(CAPPED, { headers: json });
+
     // Kill switch: STUN only. Same response shape, so clients need no changes.
-    if (overLimit(env, ctx)) {
-      return new Response(
-        JSON.stringify({ iceServers: STUN_ONLY, ttl: 0, relay: false, reason: 'usage-cap' }),
-        { headers: json },
-      );
-    }
+    if (overLimit(env, ctx)) return new Response(CAPPED, { headers: json });
 
     const ttl = Math.max(60, Number(env.TTL_SECONDS) || 86400);
     const res = await fetch(`${UPSTREAM}/${env.TURN_KEY_ID}/credentials/generate-ice-servers`, {
