@@ -59,10 +59,12 @@ res=$(curl -sS --fail-with-body -X POST \
   -H "Content-Type: application/json" \
   --data "$(jq -n --arg n "$TURN_KEY_NAME" '{name:$n}')") || {
   echo "creating the TURN key failed:" >&2; echo "$res" >&2; exit 1; }
-TURN_KEY_ID=$(jq -r '.result.uid // .result.id // empty' <<<"$res")
-TURN_KEY_SECRET=$(jq -r '.result.key // empty' <<<"$res")
+TURN_KEY_ID=$(jq -r '.result.uid // empty' <<<"$res")
+TURN_KEY_SECRET=$(jq -r '.result.secret // empty' <<<"$res")
 [ -n "$TURN_KEY_ID" ] && [ -n "$TURN_KEY_SECRET" ] || {
-  echo "unexpected response shape from create:" >&2; jq 'del(.result.key)' <<<"$res" >&2; exit 1; }
+  # Field names only: the response can carry the key's secret, which stays off the terminal.
+  echo "unexpected response shape from create (field names only):" >&2
+  jq -c '{success, errors, result_fields: (try (.result | keys) catch null)}' <<<"$res" >&2; exit 1; }
 echo "created TURN key $TURN_KEY_ID"
 
 umask 077
