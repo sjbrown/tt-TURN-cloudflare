@@ -20,7 +20,7 @@ servers to any WebRTC app.
 | `bin/deploy.sh` | Push the key into the Worker's secrets and run `wrangler deploy` (run after setup) |
 | `bin/status.sh` | List the account's TURN keys and mark the current one |
 | `bin/check_usage.sh` | Print month-to-date TURN egress, the number Cloudflare bills on |
-| `bin/test.sh` | Mint credentials and count the `stun:`, `turn:` and `turns:` URLs |
+| `bin/test.sh` | Ask Cloudflare for credentials, and with `WORKER_URL=...` ask the deployed Worker too. Prints each request, what it expects and a PASS/FAIL per check |
 | `bin/teardown.sh` | Delete the key and the Worker |
 | `bin/read_config.sh` | Sourced by every script except `setup.sh`; loads `tt-turn.env` |
 | `worker/` | Stateless Worker: `GET /ice` returns short-lived ICE servers |
