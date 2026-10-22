@@ -10,7 +10,7 @@
 # (default: the first allowed origin from setup).
 . "$(dirname "$0")/read_config.sh"
 
-titles=(); proves=(); requests=(); expects=(); want_re=(); want_txt=(); statuses=(); bodies=()
+titles=(); proves=(); requests=(); expects=(); kinds=(); want_re=(); want_txt=(); statuses=(); bodies=()
 expect_body='a JSON body whose "iceServers" include a stun: URL, a turn: URL, a turns: URL, and an entry with a username + credential'
 
 # TEST 1: ask Cloudflare directly, with the TURN key from tt-turn.env.
@@ -23,19 +23,30 @@ titles+=("Cloudflare issues TURN credentials for your TURN key")
 proves+=("the TURN key ID and secret in tt-turn.env are valid")
 requests+=("POST $url   (sends the TURN key secret, hidden; body {\"ttl\": 300} = a credential that expires in 5 minutes)")
 expects+=("HTTP 2xx (Cloudflare answers 201 Created) and $expect_body")
-want_re+=('^2'); want_txt+=("2xx (Cloudflare answers 201 Created)")
+kinds+=(creds); want_re+=('^2'); want_txt+=("2xx (Cloudflare answers 201 Created)")
 statuses+=("${raw##*$'\n'}"); bodies+=("${raw%$'\n'*}")
 
-# TEST 2 (only with WORKER_URL): ask the deployed Worker, as a browser would.
 if [ -n "${WORKER_URL:-}" ]; then
   origin=${TEST_ORIGIN:-${ALLOWED_ORIGINS%%,*}}
+
+  # TEST 2: ask the deployed Worker for credentials, as a browser would.
   url="${WORKER_URL%/}/ice"
   raw=$(curl -sS -w $'\n%{http_code}' "$url" -H "Origin: $origin") || raw=$'\n000'
   titles+=("Your deployed Worker serves credentials to an allowed website")
   proves+=("the Worker is deployed, holds the right key, and accepts the origin $origin")
   requests+=("GET $url   (header Origin: $origin)")
   expects+=("HTTP 200 and $expect_body. A Worker over its usage cap answers with STUN only (relay=false), which fails the turn:, turns: and credential checks")
-  want_re+=('^200$'); want_txt+=("200")
+  kinds+=(creds); want_re+=('^200$'); want_txt+=("200")
+  statuses+=("${raw##*$'\n'}"); bodies+=("${raw%$'\n'*}")
+
+  # TEST 3: the mock endpoint your client calls to exercise its usage-cap UI.
+  url="${WORKER_URL%/}/mock-cap-hit"
+  raw=$(curl -sS -w $'\n%{http_code}' "$url" -H "Origin: $origin") || raw=$'\n000'
+  titles+=("Your Worker's /mock-cap-hit endpoint returns the usage-cap response")
+  proves+=("the endpoint for testing your client's usage-cap UI is deployed and answers like /ice does once the cap is hit")
+  requests+=("GET $url   (header Origin: $origin)")
+  expects+=("HTTP 200 and a JSON body with relay=false, reason=usage-cap, ttl=0, a stun: URL, and no turn: or turns: URLs or credentials")
+  kinds+=(capped); want_re+=('^200$'); want_txt+=("200")
   statuses+=("${raw##*$'\n'}"); bodies+=("${raw%$'\n'*}")
 fi
 
@@ -62,9 +73,20 @@ for i in "${!titles[@]}"; do
         ($s | map(select(.username and .credential)) | length) ] | @tsv' <<<"$body" 2>/dev/null || true) || true
   n_stun=${n_stun:-0}; n_turn=${n_turn:-0}; n_turns=${n_turns:-0}; n_cred=${n_cred:-0}
 
-  names=("HTTP status is ${want_txt[$i]}" "response has a stun: URL" "response has a turn: URL" "response has a turns: URL" "an entry has a username + credential")
-  oks=("$([[ $status =~ ${want_re[$i]} ]] && echo 1 || echo 0)" "$((n_stun > 0))" "$((n_turn > 0))" "$((n_turns > 0))" "$((n_cred > 0))")
-  details=("got $status" "$n_stun found" "$n_turn found" "$n_turns found" "$n_cred found")
+  relay=none; ttl=none; reason=none
+  read -r relay ttl reason < <(jq -r 'select(type == "object") | [(.relay | tostring), (.ttl | tostring), (.reason // "none")] | @tsv' <<<"$body" 2>/dev/null || true) || true
+  relay=${relay:-none}; ttl=${ttl:-none}; reason=${reason:-none}
+
+  status_ok=$([[ $status =~ ${want_re[$i]} ]] && echo 1 || echo 0)
+  if [ "${kinds[$i]}" = capped ]; then
+    names=("HTTP status is ${want_txt[$i]}" "relay is false" "reason is usage-cap" "ttl is 0" "response has a stun: URL" "response has no turn:/turns: URLs and no credentials")
+    oks=("$status_ok" "$([ "$relay" = false ] && echo 1 || echo 0)" "$([ "$reason" = usage-cap ] && echo 1 || echo 0)" "$([ "$ttl" = 0 ] && echo 1 || echo 0)" "$((n_stun > 0))" "$((n_turn + n_turns + n_cred == 0))")
+    details=("got $status" "got relay=$relay" "got reason=$reason" "got ttl=$ttl" "$n_stun found" "$n_turn turn:, $n_turns turns:, $n_cred credentials found")
+  else
+    names=("HTTP status is ${want_txt[$i]}" "response has a stun: URL" "response has a turn: URL" "response has a turns: URL" "an entry has a username + credential")
+    oks=("$status_ok" "$((n_stun > 0))" "$((n_turn > 0))" "$((n_turns > 0))" "$((n_cred > 0))")
+    details=("got $status" "$n_stun found" "$n_turn found" "$n_turns found" "$n_cred found")
+  fi
   for j in "${!names[@]}"; do
     if [ "${oks[$j]}" = 1 ]; then
       echo "  PASS  ${names[$j]} (${details[$j]})"; pass=$((pass + 1))
@@ -87,7 +109,7 @@ done
 
 echo
 if [ -z "${WORKER_URL:-}" ]; then
-  echo "NOT RUN: Worker test. To include it: WORKER_URL=https://tt-turn-credentials.<you>.workers.dev bin/test.sh"
+  echo "NOT RUN: the two Worker tests (/ice and /mock-cap-hit). To include them: WORKER_URL=https://tt-turn-credentials.<you>.workers.dev bin/test.sh"
 fi
 echo "RESULT: $pass checks passed, $fail failed"
 [ "$fail" -eq 0 ]
